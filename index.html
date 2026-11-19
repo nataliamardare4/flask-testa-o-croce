@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Testa o Croce - Flask</title>
+  <title>Testa o Croce</title>
   <style>
     * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
     body {
@@ -84,10 +84,12 @@
       background: rgba(56, 189, 248, 0.12);
       border: 1px solid #38bdf8;
     }
+    .nascosto { display: none; }
     table {
       width: 100%;
       border-collapse: collapse;
       font-size: 0.92rem;
+      margin-top: 8px;
     }
     th, td {
       padding: 10px 8px;
@@ -102,70 +104,148 @@
 <body>
   <div class="card">
     <h1>Testa o Croce</h1>
-    <p class="sottotitolo">Sfida il PC su {{ max_turni }} lanci: 0 = Testa, 1 = Croce.</p>
+    <p class="sottotitolo">Sfida il PC su 5 lanci: 0 = Testa, 1 = Croce.</p>
 
     <div class="tabellone">
       <div class="box">
         <div class="label">Turno</div>
-        <div class="valore giallo">
-          {% if finita %}{{ max_turni }}/{{ max_turni }}{% else %}{{ turno }}/{{ max_turni }}{% endif %}
-        </div>
+        <div id="turno-valore" class="valore giallo">1/5</div>
       </div>
       <div class="box">
         <div class="label">Punti Utente</div>
-        <div class="valore verde">{{ punti_utente }}</div>
+        <div id="punti-utente" class="valore verde">0</div>
       </div>
       <div class="box">
         <div class="label">Punti PC</div>
-        <div class="valore rosso">{{ punti_pc }}</div>
+        <div id="punti-pc" class="valore rosso">0</div>
       </div>
     </div>
 
-    {% if finita %}
-      <div class="banner">
-        {% if punti_utente > punti_pc %}
-          <span class="verde">Partita terminata: hai vinto tu ({{ punti_utente }} a {{ punti_pc }})!</span>
-        {% elif punti_pc > punti_utente %}
-          <span class="rosso">Partita terminata: ha vinto il PC ({{ punti_pc }} a {{ punti_utente }})!</span>
-        {% else %}
-          <span class="giallo">Partita terminata in pareggio ({{ punti_utente }} a {{ punti_pc }})!</span>
-        {% endif %}
-      </div>
-      <form method="post" class="bottoni">
-        <button type="submit" name="azione" value="reset" class="btn-reset">Gioca ancora</button>
-      </form>
-    {% else %}
-      <form method="post" class="bottoni">
-        <button type="submit" name="azione" value="0" class="btn-testa">Scegli 0 - Testa</button>
-        <button type="submit" name="azione" value="1" class="btn-croce">Scegli 1 - Croce</button>
-        <button type="submit" name="azione" value="reset" class="btn-reset">Ricomincia</button>
-      </form>
-    {% endif %}
+    <div id="banner-finale" class="banner nascosto"></div>
 
-    {% if cronologia %}
-      <table>
-        <thead>
-          <tr>
-            <th>Turno</th>
-            <th>Tua scelta</th>
-            <th>Uscito</th>
-            <th>Esito</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for riga in cronologia | reverse %}
-            <tr>
-              <td>#{{ riga.turno }}</td>
-              <td>{{ riga.scelta }}</td>
-              <td>{{ riga.esito }}</td>
-              <td class="{{ 'badge-win' if riga.esito_turno == 'utente' else 'badge-lose' }}">
-                {{ riga.messaggio }}
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    {% endif %}
+    <div id="controlli-gioco" class="bottoni">
+      <button type="button" class="btn-testa" onclick="giocaTurno(0)">Scegli 0 - Testa</button>
+      <button type="button" class="btn-croce" onclick="giocaTurno(1)">Scegli 1 - Croce</button>
+      <button type="button" class="btn-reset" onclick="nuovaPartita()">Ricomincia</button>
+    </div>
+
+    <div id="controlli-fine" class="bottoni nascosto">
+      <button type="button" class="btn-reset" onclick="nuovaPartita()">Gioca ancora</button>
+    </div>
+
+    <table id="tabella-cronologia" class="nascosto">
+      <thead>
+        <tr>
+          <th>Turno</th>
+          <th>Tua scelta</th>
+          <th>Uscito</th>
+          <th>Esito</th>
+        </tr>
+      </thead>
+      <tbody id="corpo-cronologia"></tbody>
+    </table>
   </div>
+
+  <script>
+    const MAX_TURNI = 5;
+    const ETICHETTE = { 0: "Testa", 1: "Croce" };
+
+    let turno = 1;
+    let puntiUtente = 0;
+    let puntiPc = 0;
+    let cronologia = [];
+    let finita = false;
+
+    function nuovaPartita() {
+      turno = 1;
+      puntiUtente = 0;
+      puntiPc = 0;
+      cronologia = [];
+      finita = false;
+      aggiornaSchermo();
+    }
+
+    function giocaTurno(scelta) {
+      if (finita) return;
+
+      const esito = Math.floor(Math.random() * 2); // 0 oppure 1
+      const turnoCorrente = turno;
+      let esitoTurno = "pc";
+      let messaggio = "Ha indovinato il PC! +1 punto per il PC.";
+
+      if (scelta === esito) {
+        puntiUtente += 1;
+        esitoTurno = "utente";
+        messaggio = "Hai indovinato! +1 punto per te.";
+      } else {
+        puntiPc += 1;
+      }
+
+      cronologia.push({
+        turno: turnoCorrente,
+        scelta: `${scelta} (${ETICHETTE[scelta]})`,
+        esito: `${esito} (${ETICHETTE[esito]})`,
+        esitoTurno,
+        messaggio
+      });
+
+      if (turnoCorrente >= MAX_TURNI) {
+        finita = true;
+      } else {
+        turno += 1;
+      }
+
+      aggiornaSchermo();
+    }
+
+    function aggiornaSchermo() {
+      document.getElementById("turno-valore").textContent = `${finita ? MAX_TURNI : turno}/${MAX_TURNI}`;
+      document.getElementById("punti-utente").textContent = puntiUtente;
+      document.getElementById("punti-pc").textContent = puntiPc;
+
+      const banner = document.getElementById("banner-finale");
+      const ctrlGioco = document.getElementById("controlli-gioco");
+      const ctrlFine = document.getElementById("controlli-fine");
+
+      if (finita) {
+        banner.classList.remove("nascosto");
+        ctrlGioco.classList.add("nascosto");
+        ctrlFine.classList.remove("nascosto");
+
+        if (puntiUtente > puntiPc) {
+          banner.innerHTML = `<span class="verde">Partita terminata: hai vinto tu (${puntiUtente} a${puntiPc})!</span>`;
+        } else if (puntiPc > puntiUtente) {
+          banner.innerHTML = `<span class="rosso">Partita terminata: ha vinto il PC (${puntiPc} a${puntiUtente})!</span>`;
+        } else {
+          banner.innerHTML = `<span class="giallo">Partita terminata in pareggio (${puntiUtente} a${puntiPc})!</span>`;
+        }
+      } else {
+        banner.classList.add("nascosto");
+        ctrlGioco.classList.remove("nascosto");
+        ctrlFine.classList.add("nascosto");
+      }
+
+      const tabella = document.getElementById("tabella-cronologia");
+      const corpo = document.getElementById("corpo-cronologia");
+      corpo.innerHTML = "";
+
+      if (cronologia.length > 0) {
+        tabella.classList.remove("nascosto");
+        [...cronologia].reverse().forEach((riga) => {
+          const tr = document.createElement("tr");
+          const classeEsito = riga.esitoTurno === "utente" ? "badge-win" : "badge-lose";
+          tr.innerHTML = `
+            <td>#${riga.turno}</td>
+            <td>${riga.scelta}</td>
+            <td>${riga.esito}</td>
+            <td class="${classeEsito}">${riga.messaggio}</td>
+          `;
+          corpo.appendChild(tr);
+        });
+      } else {
+        tabella.classList.add("nascosto");
+      }
+    }
+  </script>
 </body>
 </html>
