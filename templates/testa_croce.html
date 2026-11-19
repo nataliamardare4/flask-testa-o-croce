@@ -1,1 +1,171 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Testa o Croce - Flask</title>
+  <style>
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: #f8fafc;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+    }
+    .card {
+      width: 100%;
+      max-width: 640px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 1.8rem;
+      color: #38bdf8;
+    }
+    .sottotitolo {
+      margin: 0 0 24px;
+      color: #94a3b8;
+    }
+    .tabellone {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .box {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 14px;
+      text-align: center;
+    }
+    .box .label { font-size: 0.85rem; color: #94a3b8; }
+    .box .valore { font-size: 1.6rem; font-weight: 700; margin-top: 4px; }
+    .verde { color: #4ade80; }
+    .rosso { color: #f87171; }
+    .giallo { color: #facc15; }
 
+    .bottoni {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    button {
+      flex: 1;
+      min-width: 140px;
+      padding: 14px 18px;
+      font-size: 1rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform 0.12s ease, opacity 0.15s ease;
+    }
+    button:hover { transform: translateY(-1px); opacity: 0.95; }
+    .btn-testa { background: #0284c7; color: #fff; }
+    .btn-croce { background: #d97706; color: #fff; }
+    .btn-reset { background: #475569; color: #f8fafc; }
+
+    .banner {
+      padding: 16px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      font-weight: 600;
+      text-align: center;
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid #38bdf8;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.92rem;
+    }
+    th, td {
+      padding: 10px 8px;
+      border-bottom: 1px solid #334155;
+      text-align: left;
+    }
+    th { color: #94a3b8; font-weight: 600; }
+    .badge-win { color: #4ade80; font-weight: 700; }
+    .badge-lose { color: #f87171; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Testa o Croce</h1>
+    <p class="sottotitolo">Sfida il PC su {{ max_turni }} lanci: 0 = Testa, 1 = Croce.</p>
+
+    <div class="tabellone">
+      <div class="box">
+        <div class="label">Turno</div>
+        <div class="valore giallo">
+          {% if finita %}{{ max_turni }}/{{ max_turni }}{% else %}{{ turno }}/{{ max_turni }}{% endif %}
+        </div>
+      </div>
+      <div class="box">
+        <div class="label">Punti Utente</div>
+        <div class="valore verde">{{ punti_utente }}</div>
+      </div>
+      <div class="box">
+        <div class="label">Punti PC</div>
+        <div class="valore rosso">{{ punti_pc }}</div>
+      </div>
+    </div>
+
+    {% if finita %}
+      <div class="banner">
+        {% if punti_utente > punti_pc %}
+          <span class="verde">Partita terminata: hai vinto tu ({{ punti_utente }} a {{ punti_pc }})!</span>
+        {% elif punti_pc > punti_utente %}
+          <span class="rosso">Partita terminata: ha vinto il PC ({{ punti_pc }} a {{ punti_utente }})!</span>
+        {% else %}
+          <span class="giallo">Partita terminata in pareggio ({{ punti_utente }} a {{ punti_pc }})!</span>
+        {% endif %}
+      </div>
+      <form method="post" class="bottoni">
+        <button type="submit" name="azione" value="reset" class="btn-reset">Gioca ancora</button>
+      </form>
+    {% else %}
+      <form method="post" class="bottoni">
+        <button type="submit" name="azione" value="0" class="btn-testa">Scegli 0 - Testa</button>
+        <button type="submit" name="azione" value="1" class="btn-croce">Scegli 1 - Croce</button>
+        <button type="submit" name="azione" value="reset" class="btn-reset">Ricomincia</button>
+      </form>
+    {% endif %}
+
+    {% if cronologia %}
+      <table>
+        <thead>
+          <tr>
+            <th>Turno</th>
+            <th>Tua scelta</th>
+            <th>Uscito</th>
+            <th>Esito</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for riga in cronologia | reverse %}
+            <tr>
+              <td>#{{ riga.turno }}</td>
+              <td>{{ riga.scelta }}</td>
+              <td>{{ riga.esito }}</td>
+              <td class="{{ 'badge-win' if riga.esito_turno == 'utente' else 'badge-lose' }}">
+                {{ riga.messaggio }}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
+  </div>
+</body>
+</html>
